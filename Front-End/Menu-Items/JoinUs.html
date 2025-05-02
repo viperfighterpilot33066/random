@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Us - I.N IT RUNNING</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        .join-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1f1f1f;
+            border-radius: 12px;
+            color: white;
+        }
+
+        .membership-option {
+            background: #2a2a2a;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .volunteer-section {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .join-button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .benefits-list {
+            text-align: left;
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+
+        .contact-info {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .join-container {
+                margin: 10px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img src="../images/Logo.webp" id="logoImg">
+    <button id="menu-button" aria-controls="Menu" aria-expanded="false">☰</button>
+    <div class="hidden" id="Menu">
+        <ul>
+            <li><span id="status">Not logged in</span></li>
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="MembersPortal.html">Members Portal</a></li>
+            <li><a href="AboutUs.html">About Us</a></li>
+            <li><a href="PhotoGallery.html">Photo Gallery</a></li>
+            <li><a href="JoinUs.html">Join Us!</a></li>
+        </ul>
+    </div>
+
+    <div class="join-container">
+        <h1>Join Our Running Community</h1>
+        <p>I.N IT RUNNING is a non-profit organization dedicated to building a supportive running community.</p>
+        
+        <div class="membership-option">
+            <h2>Community Membership</h2>
+            <p>Free to join, supported by community donations</p>
+            <ul class="benefits-list">
+                <li>Access to group runs</li>
+                <li>Community support</li>
+                <li>Training resources</li>
+                <li>Event participation</li>
+            </ul>
+            <button class="join-button" onclick="window.location.href='MembersPortal.html'">Join Our Community</button>
+        </div>
+
+        <div class="volunteer-section">
+            <h2>Volunteer Opportunities</h2>
+            <ul class="benefits-list">
+                <li>Event organization</li>
+                <li>Route planning</li>
+                <li>Social media support</li>
+                <li>New member mentoring</li>
+            </ul>
+            <p>Interested in volunteering? Contact us below!</p>
+        </div>
+
+        <div class="contact-info">
+            <h3>Get in Touch</h3>
+            <p>Email: community@initrunning.com</p>
+            <p>Phone: (555) 123-4567</p>
+            <p>Follow us on social media for updates</p>
+        </div>
+    </div>
+
+    <script src="../java.js"></script>
+</body>
+</html>

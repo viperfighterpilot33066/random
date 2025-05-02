@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+  <title>Firebase Login</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .container {
+      background-color: #1f1f1f;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+      height: auto;
+      min-height: 400px;
+      overflow: hidden;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 26px;
+      font-weight: normal;
+      color: #f5f5f5;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background-color: #222;
+      color: white;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #555;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #bbb;
+    }
+
+    .link-button {
+      background-color: transparent;
+      color: #ddd;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 14px;
+      margin-top: 15px;
+    }
+
+    .link-button:hover {
+      color: white;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #logo-container {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #login-form,
+    #forgot-password-form,
+    #signup-form {
+      width: 100%;
+      position: absolute;
+      top: 40px;
+      left: 0;
+      padding: 0 40px;
+      box-sizing: border-box;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      display: none;
+    }
+
+    #login-form.show,
+    #forgot-password-form.show,
+    #signup-form.show {
+      opacity: 1;
+      pointer-events: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <button id="menu-button" aria-controls="Menu" aria-expanded="false">☰</button>
+  <div class="hidden" id="Menu">
+    <ul>
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="LoginPortal.html">Login Portal</a></li>
+      <li><a href="#">About Us</a></li>
+      <li><a href="#">Photo Gallery</a></li>
+      <li><a href="#">Join Us!</a></li>
+    </ul>
+  </div>
+  <div class="container" id="form-container">
+    <!-- Logo section, visible when logged in -->
+    <div id="logo-container">
+      <img src="logo.png" alt="Logo" id="logoImg" style="max-width: 100px;">
+      <button onclick="logout()">Logout</button>
+    </div>
+    <!-- Login Form -->
+    <div id="login-form" class="show">
+      <h2>Login</h2>
+      <input type="email" id="login-email" placeholder="Email"><br>
+      <input type="password" id="login-password" placeholder="Password"><br>
+      <button onclick="login()">Login</button>
+      <button class="link-button" onclick="showForgotPassword()">Forgot Password?</button>
+      <button class="link-button" onclick="showSignUp()">Sign Up</button>
+    </div>
+    <!-- Forgot Password Form -->
+    <div id="forgot-password-form" class="hidden">
+      <h2>Reset Password</h2>
+      <input type="email" id="reset-email" placeholder="Email"><br>
+      <button onclick="resetPassword()">Reset</button>
+      <button class="link-button" onclick="showLogin()">Back to Login</button>
+    </div>
+    <!-- Sign Up Form -->
+    <div id="signup-form" class="hidden">
+      <h2>Sign Up</h2>
+      <input type="text" id="reg-name" placeholder="Full Name"><br>
+      <input type="email" id="reg-email" placeholder="Email"><br>
+      <input type="password" id="reg-password" placeholder="Password"><br>
+      <button onclick="register()">Register</button>
+      <button class="link-button" onclick="showLogin()">Back to Login</button>
+    </div>
+    <p id="status">You are not logged in.</p>
+  </div>
+  <script src="../java.js"></script>
+  <script type="module">
+    // Import Firebase modules directly
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvBjMwPgEiTfLKei-irOPzWbXYvDSZmYo",
+      authDomain: "fir-practice-13a0a.firebaseapp.com",
+      projectId: "fir-practice-13a0a",
+      storageBucket: "fir-practice-13a0a.firebasestorage.app",
+      messagingSenderId: "637216269386",
+      appId: "1:637216269386:web:695bdf613fdf543abcf2b3",
+      measurementId: "G-RX6F55WEXD"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Define functions in global scope
+    window.login = function() {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+
+      if (!email || !password) {
+        alert("Please enter both email and password.");
+        return;
+      }
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          document.getElementById("status").innerText = `Hello, ${user.displayName || user.email}`;
+          document.getElementById("login-form").classList.remove('show');
+          document.getElementById("logo-container").style.display = 'block';
+        })
+        .catch((error) => {
+          alert("Login failed: " + error.message);
+        });
+    };
+
+    window.register = function() {
+      const name = document.getElementById("reg-name").value;
+      const email = document.getElementById("reg-email").value;
+      const password = document.getElementById("reg-password").value;
+
+      if (!name || !email || !password) {
+        alert("Please fill in all fields.");
+        return;
+      }
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          return updateProfile(userCredential.user, {
+            displayName: name
+          });
+        })
+        .then(() => {
+          alert("Registration successful!");
+          showLogin();
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    window.resetPassword = function() {
+      const email = document.getElementById("reset-email").value;
+      if (!email) {
+        alert("Please enter your email address.");
+        return;
+      }
+
+      sendPasswordResetEmail(auth, email)
+        .then(() => {
+          alert("Password reset email sent!");
+          showLogin();
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    window.logout = function() {
+      signOut(auth)
+        .then(() => {
+          document.getElementById("login-form").classList.add('show');
+          document.getElementById("logo-container").style.display = 'none';
+          alert("Logged out successfully.");
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    // Form toggle functions
+    window.showForgotPassword = function() {
+      document.getElementById('login-form').classList.remove('show');
+      document.getElementById('forgot-password-form').classList.add('show');
+      document.getElementById('signup-form').classList.remove('show');
+    };
+
+    window.showSignUp = function() {
+      document.getElementById('login-form').classList.remove('show');
+      document.getElementById('forgot-password-form').classList.remove('show');
+      document.getElementById('signup-form').classList.add('show');
+    };
+
+    window.showLogin = function() {
+      document.getElementById('login-form').classList.add('show');
+      document.getElementById('forgot-password-form').classList.remove('show');
+      document.getElementById('signup-form').classList.remove('show');
+    };
+
+    // Initialize active form
+    showLogin();
+
+    // Auth state observer
+    onAuthStateChanged(auth, (user) => {
+      const status = document.getElementById("status");
+      if (user) {
+        status.innerText = "Logged in"; // Changed to hide user name
+        document.getElementById("login-form").classList.remove('show');
+        document.getElementById("logo-container").style.display = 'block';
+      } else {
+        status.innerText = "Not logged in";
+        document.getElementById("login-form").classList.add('show');
+        document.getElementById("logo-container").style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

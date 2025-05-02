@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Chat</title>
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .chat-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #1f1f1f;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            position: relative;
+            word-break: break-word;
+            transition: background 0.3s ease;
+        }
+
+        .message.sent {
+            background: #4285f4;
+            margin-left: auto;
+            color: white;
+        }
+
+        .message.received {
+            background: #333;
+            margin-right: auto;
+            color: white;
+        }
+
+        .message-menu {
+            display: none;
+            position: absolute;
+            background: #1f1f1f;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .message-menu button {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            color: white;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .message-menu button:hover {
+            background: #333;
+        }
+
+        .message-input {
+            position: relative;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .message-input input {
+            flex: 1;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 16px;
+        }
+
+        .message-input button {
+            padding: 15px 30px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .message-input button:hover {
+            background: #3b77db;
+        }
+
+        .message.selected {
+            outline: 2px solid #4285f4;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+
+            .chat-container {
+                margin: 0;
+                height: 100vh;
+                border-radius: 0;
+                padding: 15px;
+            }
+
+            .messages {
+                height: calc(100vh - 140px);
+                padding: 10px;
+            }
+
+            .message {
+                max-width: 90%;
+                font-size: 14px;
+            }
+
+            .message-input {
+                padding: 10px;
+            }
+
+            .message-input input {
+                font-size: 16px;
+            }
+
+            .back-button {
+                top: 10px;
+                left: 10px;
+            }
+
+            .message-controls {
+                display: flex;
+                opacity: 0.7;
+            }
+
+            .message.long-press {
+                outline: 2px solid #4285f4;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-button" onclick="window.location.href='MembersPortal.html'">← Back</button>
+    
+    <div class="chat-container">
+        <div class="messages" id="messageContainer"></div>
+        <div class="message-input">
+            <input type="text" id="messageInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, get, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvBjMwPgEiTfLKei-irOPzWbXYvDSZmYo",
+            authDomain: "fir-practice-13a0a.firebaseapp.com",
+            projectId: "fir-practice-13a0a",
+            storageBucket: "fir-practice-13a0a.firebasestorage.app",
+            messagingSenderId: "637216269386",
+            appId: "1:637216269386:web:695bdf613fdf543abcf2b3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        let currentUser = null;
+        let userRole = null;
+        const messagesRef = ref(db, 'messages');
+
+        // Check authentication and get user role
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                const userRef = ref(db, `users/${user.uid}`);
+                const snapshot = await get(userRef);
+                if (snapshot.exists()) {
+                    userRole = snapshot.val().role;
+                }
+            } else {
+                window.location.href = 'MembersPortal.html';
+            }
+        });
+
+        let longPressTimer;
+        let messageMenu = document.createElement('div');
+        messageMenu.className = 'message-menu';
+        document.body.appendChild(messageMenu);
+
+        // Handle message interactions
+        function attachMessageHandlers(messageDiv, msgId, msg) {
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                // Mobile: Long press
+                messageDiv.addEventListener('touchstart', (e) => {
+                    longPressTimer = setTimeout(() => {
+                        showMessageMenu(e, msgId, msg);
+                        messageDiv.classList.add('long-press');
+                    }, 500);
+                });
+
+                messageDiv.addEventListener('touchend', () => {
+                    clearTimeout(longPressTimer);
+                    messageDiv.classList.remove('long-press');
+                });
+            } else {
+                // Desktop: Right click
+                messageDiv.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    showMessageMenu(e, msgId, msg);
+                });
+            }
+        }
+
+        function showMessageMenu(event, msgId, msg) {
+            event.preventDefault();
+            const canEdit = msg.uid === currentUser?.uid;
+            const canDelete = canEdit || userRole === 'admin' || userRole === 'owner';
+
+            if (!canEdit && !canDelete) return;
+
+            messageMenu.innerHTML = `
+                ${canEdit ? `<button onclick="window.editMessage('${msgId}')">Edit Message</button>` : ''}
+                ${canDelete ? `<button onclick="window.deleteMessage('${msgId}')">Delete Message</button>` : ''}
+            `;
+
+            const rect = event.target.getBoundingClientRect();
+            messageMenu.style.display = 'block';
+            messageMenu.style.top = `${rect.top}px`;
+            messageMenu.style.left = `${rect.left}px`;
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!messageMenu.contains(e.target)) {
+                messageMenu.style.display = 'none';
+            }
+        });
+
+        // Load and display messages
+        onValue(messagesRef, (snapshot) => {
+            const container = document.getElementById('messageContainer');
+            container.innerHTML = '';
+            
+            const messages = snapshot.val() || {};
+            Object.entries(messages).forEach(([msgId, msg]) => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.uid === currentUser?.uid ? 'sent' : 'received'}`;
+                
+                div.innerHTML = `
+                    ${msg.text}
+                    <div class="message-meta">
+                        ${msg.sender} - ${new Date(msg.timestamp).toLocaleTimeString()}
+                        ${msg.edited ? '(edited)' : ''}
+                    </div>
+                `;
+                
+                attachMessageHandlers(div, msgId, msg);
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        });
+
+        // Message functions
+        window.editMessage = async (msgId) => {
+            const msgRef = ref(db, `messages/${msgId}`);
+            const snapshot = await get(msgRef);
+            const msg = snapshot.val();
+            
+            if (msg?.uid === currentUser?.uid) {
+                const input = document.getElementById('messageInput');
+                input.value = msg.text;
+                input.dataset.editing = msgId;
+                input.focus();
+            }
+        };
+
+        window.deleteMessage = async (msgId) => {
+            const msgRef = ref(db, `messages/${msgId}`);
+            const snapshot = await get(msgRef);
+            const msg = snapshot.val();
+            
+            if (msg?.uid === currentUser?.uid || userRole === 'admin' || userRole === 'owner') {
+                if (confirm('Delete this message?')) {
+                    await remove(msgRef);
+                }
+            }
+        };
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !currentUser) return;
+
+            const editingId = input.dataset.editing;
+            if (editingId) {
+                // Update existing message
+                const msgRef = ref(db, `messages/${editingId}`);
+                await update(msgRef, {
+                    text,
+                    edited: true,
+                    editedAt: Date.now()
+                });
+                delete input.dataset.editing;
+            } else {
+                // Send new message
+                await push(messagesRef, {
+                    text,
+                    sender: currentUser.displayName || currentUser.email,
+                    uid: currentUser.uid,
+                    timestamp: Date.now()
+                });
+            }
+            
+            input.value = '';
+        };
+
+        // Enter key to send
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
